@@ -1,0 +1,57 @@
+{
+  "id": "22d5aa2f-bc1e-4662-a7d1-4eeb24e9639a",
+  "name": "Main - BlueBotics",
+  "publisher": "Dynamics Business Excellence",
+  "version": "17.0.0.64",
+  "brief": "",
+  "description": "",
+  "privacyStatement": "",
+  "EULA": "",
+  "help": "",
+  "url": "",
+  "logo": "",
+  "dependencies": [
+    {
+      "id": "8d4eab29-8c7f-4b6c-be9a-b7fdfb9da196",
+      "publisher": "Continia Software",
+      "name": "Continia Expense Management 365",
+      "version": "1.0.0.0"
+    },
+    {
+      "id": "4b915d7e-c02a-435f-85ab-649086c1e002",
+      "publisher": "Continia Software",
+      "name": "Continia Core",
+      "version": "1.0.0.0"
+    },
+    {
+      "id": "6da8dd2f-e698-461f-9147-8e404244dd85",
+      "publisher": "Continia Software",
+      "name": "Continia Document Capture 365",
+      "version": "1.0.0.0"
+    },
+    {
+      "id": "c626f46b-e0b2-4e1c-b681-8f407bab1d8d",
+      "publisher": "Dynamics Business Excellence",
+      "name": "Plan It",
+      "version": "1.0.0.0"
+    },
+    {
+      "id": "3a166617-0a1c-4cc6-a151-6f9810c6dcbd",
+    "publisher": "IBODigital GmbH",
+    "name": "sBarcode",
+    "version": "1.0.0.0"
+    }
+  ],
+  "screenshots": [],
+  "platform": "17.0.0.0",
+  "application": "17.0.0.0",
+  "idRanges": [
+    {
+      "from": 50200,
+      "to": 50349
+    }
+  ],
+  "contextSensitiveHelpUrl": "https://Main.com/help/",
+  "showMyCode": true,
+  "runtime": "6.0"
+}

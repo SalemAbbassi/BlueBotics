@@ -1,0 +1,22 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "BLUEBOTICS SB",
+            "request": "launch",
+            "type": "al",
+            "environmentType": "Sandbox",
+            "environmentName": "SB-Prod-06-04-2021",//SB-Prod-05-02-21",//"SB-Prod-22-03-21",//SB-Prod-21-01-21",//"SB-Prod-12-11-2020",//"SB-Prod-05-10-2020",//"BlueBotics_Sandbox",
+            "tenant": "3d0f6bc5-394c-4352-9a4c-fb715a9e68b6",
+            "server": "https://businesscentral.dynamics.com",
+            "startupObjectId": 22,
+            "startupObjectType": "Page",
+            "breakOnError": true,
+            "launchBrowser": true,
+            "enableLongRunningSqlStatements": true,
+            "enableSqlInformationDebugger": true,
+            "authentication": "AAD",
+            "schemaUpdateMode": "ForceSync",
+        }
+    ]
+}
