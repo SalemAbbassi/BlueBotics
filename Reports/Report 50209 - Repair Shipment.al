@@ -14,7 +14,14 @@ report 50209 "BBX Repair Shipment"
             column(No_ServiceShpHeader; "No.")
             {
             }
+
             column(InvoivingAddress_Header; TxtGInvoivingAddress)
+            {
+            }
+            column(User_ID; "User ID")
+            {
+            }
+            column(OrderNo; "Order No.")
             {
             }
             column(Date; Format(WorkDate, 0, '<day,2>.<month,2>.<year4>'))

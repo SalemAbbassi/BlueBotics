@@ -17,11 +17,18 @@ report 50207 "BBX Service Order"
             column(Date; Format(WorkDate, 0, '<day,2>.<month,2>.<year4>'))
             {
             }
+            column(YourReference; "Your Reference")
+            {
+            }
             column(OrderDate; FORMAT("Order Date", 0, '<day,2>.<month,2>.<year4>'))
             {
             }
             column(OurQuotation; "Quote No.")
             {
+            }
+            column(DeliveryAddress; TxtGDeliveryAddress)
+            {
+
             }
             column(OurReference_ServiceHeader; "Assigned User ID")
             {
@@ -50,6 +57,7 @@ report 50207 "BBX Service Order"
 
             trigger OnAfterGetRecord()
             var
+                IntLi: Integer;
             begin
                 FormatAddressFields(ServiceHeader);
                 FormatDocumentFields(ServiceHeader);
@@ -57,6 +65,14 @@ report 50207 "BBX Service Order"
                 TxtGFooter := StrSubstNo('%1, %2, %3-%4, %5, Tel: %6, email: %7', CompanyAddr[1], CompanyAddr[2], CompanyInfo."Country/Region Code", CompanyAddr[3], RecGCountryRegion.Name, CompanyInfo."Phone No.", CompanyInfo."E-Mail");
                 CurrencyCode := GetCurrencySymbol();
                 if not RecGUserSetup.Get("Assigned User ID") then RecGUserSetup.Init();
+
+                clear(TxtGDeliveryAddress);
+                For IntLi := 1 to 8 do begin
+                    if CompanyAddr[IntLi] <> '' then
+                        TxtGDeliveryAddress += CompanyAddr[IntLi] + ',';
+                end;
+                if TxtGDeliveryAddress <> '' then
+                    TxtGDeliveryAddress := Copystr(TxtGDeliveryAddress, 1, strlen(TxtGDeliveryAddress) - 1);
             end;
         }
         dataitem(ServiceItemLine; "Service Item Line")
@@ -101,6 +117,9 @@ report 50207 "BBX Service Order"
                 column(VAT_ServiceLine; StrSubstNo('%1%', "VAT %"))
                 {
                 }
+                column(Warranty; TxtGWarranty)
+                {
+                }
 
                 trigger OnPreDataItem()
                 begin
@@ -122,14 +141,14 @@ report 50207 "BBX Service Order"
                     TotalGrossAmt += GrossAmt;
                     TotalVATAmount := TotalGrossAmt - TotalAmt;
 
+                    if Warranty then
+                        TxtGWarranty := 'YES'
+                    else
+                        TxtGWarranty := 'NO';
                 end;
             }
             trigger OnAfterGetRecord()
             begin
-                if Warranty then
-                    TxtGWarranty := 'YES'
-                else
-                    TxtGWarranty := 'NO';
             end;
         }
 
@@ -151,6 +170,12 @@ report 50207 "BBX Service Order"
             DataItemTableView = sorting(Number) where(Number = Const(1));
 
             column(PhoneNoCaption; PhoneNoCaptionLbl)
+            {
+            }
+            column(InvoiceAddr_Lbl; InvoiceAddrLbl)
+            {
+            }
+            column(ShipToAddress_Lbl; ShiptoAddrLbl)
             {
             }
             column(EmailCaption; EmailCaptionLbl)
@@ -266,6 +291,8 @@ report 50207 "BBX Service Order"
         VATCaptionLbl: Label 'VAT';
         IntermTotalCaptionLbl: Label 'Intermediate total';
         TotaCaptionLbl: Label 'Total';
+        InvoiceAddrLbl: Label 'Invoicing address :';
+        ShiptoAddrLbl: Label 'Delivery address :';
         RecGUserSetup: Record "User Setup";
         Amt: Decimal;
         GrossAmt: Decimal;
@@ -278,7 +305,8 @@ report 50207 "BBX Service Order"
         TotalExclVATText: Text[50];
         TxtGWarranty: Text;
         TxtGFooter: Text;
-        CurrencyCode: text;
+        CurrencyCode: Text;
+        TxtGDeliveryAddress: Text;
         CompanyAddr: array[8] of Text[100];
         CustAddr: array[8] of Text[100];
         RespCenter: Record "Responsibility Center";

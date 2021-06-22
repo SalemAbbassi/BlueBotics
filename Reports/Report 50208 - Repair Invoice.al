@@ -14,6 +14,9 @@ report 50208 "BBX Repair Invoice"
             column(No_ServiceInvHeader; "No.")
             {
             }
+            column(Order_No_; "Order No.")
+            {
+            }
             column(Date; Format(WorkDate, 0, '<day,2>.<month,2>.<year4>'))
             {
             }
