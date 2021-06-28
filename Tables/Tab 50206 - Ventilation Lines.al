@@ -76,7 +76,7 @@ table 50206 "BBX Ventilation Lines"
             var
                 RecLCurrency: Record Currency;
                 RecLSalesHeader: Record "Sales Header";
-                RecLGeneralLedgerSetup: Record 98;
+                RecLGeneralLedgerSetup: Record "General Ledger Setup";
             begin
                 RecLSalesHeader.Get(RecLSalesHeader."Document Type"::Order, "Sales Order No.");
                 if RecLSalesHeader."Currency Code" <> '' then begin
@@ -127,24 +127,11 @@ table 50206 "BBX Ventilation Lines"
             Error(CstLPercentageError);
     end;
 
-    procedure InsertFromSalesLines(RecPSalesLine: Record "Sales Line"; IntPVentilation: Integer)
+    procedure CopyFromSalesLine(RecPSalesLine: Record "Sales Line")
     begin
-        Rec.Init();
-        Rec."Entry No." := GetEntryNo();
         Rec.Validate("Sales Order No.", RecPSalesLine."Document No.");
         Rec.Validate("Sales Order Line No.", RecPSalesLine."Line No.");
         Rec.Validate("Item No.", RecPSalesLine."No.");
         Rec.Validate(Amount, RecPSalesLine.Amount);
-        Rec.Validate("Gen. Prod. Posting Group", RecPSalesLine."Gen. Prod. Posting Group");
-        Rec.Validate("Ventilation %", IntPVentilation);
-        Rec.Insert();
-    end;
-
-    procedure GetEntryNo(): Integer
-    begin
-        if Rec.FindLast() then
-            exit(Rec."Entry No." + 1)
-        else
-            exit(1);
     end;
 }

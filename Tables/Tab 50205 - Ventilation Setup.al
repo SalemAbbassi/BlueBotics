@@ -59,7 +59,6 @@ table 50205 "BBX Ventilation Setup"
         IntLVentilationPercentage: Integer;
         CstLPercentageError: Label 'The ventilation % total can not exceed 100';
     begin
-        RecLVentilationSetup.Reset();
         RecLVentilationSetup.SetRange("Item No.", Rec."Item No.");
         if RecLVentilationSetup.FindSet() then
             repeat

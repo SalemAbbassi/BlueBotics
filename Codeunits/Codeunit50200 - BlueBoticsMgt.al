@@ -70,70 +70,37 @@ codeunit 50200 "BBX Mgt"
     [EventSubscriber(ObjectType::Table, Database::"Sales Line", 'OnAfterValidateEvent', 'Quantity', false, false)]
     local procedure OnAfterValidateQuantitySalesLine(VAR Rec: Record "Sales Line"; VAR xRec: Record "Sales Line"; CurrFieldNo: Integer)
     var
-        RecLVentilationLines: Record "BBX Ventilation Lines";
+        BlueBoticsFctMgt: Codeunit "BBX Function Mgt";
     begin
         if Rec.IsTemporary then
             exit;
-
-        if not (Rec."Quantity" <> xRec.Quantity) or
-            (Rec."Line No." = 0) or
-            (Rec."Document Type" <> Rec."Document Type"::Order) then
+        if not (Rec."Quantity" <> xRec.Quantity) then
             exit;
-
-        RecLVentilationLines.SetRange("Sales Order No.", Rec."Document No.");
-        RecLVentilationLines.SetRange("Sales Order Line No.", Rec."Line No.");
-        RecLVentilationLines.SetRange("Item No.", Rec."No.");
-        if RecLVentilationLines.FindSet() then
-            repeat
-                RecLVentilationLines.Validate(Amount, Rec.Amount);
-                RecLVentilationLines.Modify();
-            until RecLVentilationLines.Next() = 0;
+        BlueBoticsFctMgt.UpdateAmountVentilation(Rec);
     end;
 
     [EventSubscriber(ObjectType::Table, Database::"Sales Line", 'OnAfterValidateEvent', 'Unit Price', false, false)]
     local procedure OnAfterValidateUnitPriceSalesLine(VAR Rec: Record "Sales Line"; VAR xRec: Record "Sales Line"; CurrFieldNo: Integer)
     var
-        RecLVentilationLines: Record "BBX Ventilation Lines";
+        BlueBoticsFctMgt: Codeunit "BBX Function Mgt";
     begin
         if Rec.IsTemporary then
             exit;
-
-        if not (Rec."Unit Price" <> xRec."Unit Price") or
-            (Rec."Line No." = 0) or
-            (Rec."Document Type" <> Rec."Document Type"::Order) then
+        if not (Rec."Unit Price" <> xRec."Unit Price") then
             exit;
-
-        RecLVentilationLines.SetRange("Sales Order No.", Rec."Document No.");
-        RecLVentilationLines.SetRange("Sales Order Line No.", Rec."Line No.");
-        RecLVentilationLines.SetRange("Item No.", Rec."No.");
-        if RecLVentilationLines.FindSet() then
-            repeat
-                RecLVentilationLines.Validate(Amount, Rec.Amount);
-                RecLVentilationLines.Modify();
-            until RecLVentilationLines.Next() = 0;
+        BlueBoticsFctMgt.UpdateAmountVentilation(Rec);
     end;
 
     [EventSubscriber(ObjectType::Table, Database::"Sales Line", 'OnAfterValidateEvent', 'Amount', false, false)]
     local procedure OnAfterValidateAmountSalesLine(VAR Rec: Record "Sales Line"; VAR xRec: Record "Sales Line"; CurrFieldNo: Integer)
     var
-        RecLVentilationLines: Record "BBX Ventilation Lines";
+        BlueBoticsFctMgt: Codeunit "BBX Function Mgt";
     begin
         if Rec.IsTemporary then
             exit;
-
-        if not (Rec."Unit Price" <> xRec."Unit Price") or
-            (Rec."Line No." = 0) or
-            (Rec."Document Type" <> Rec."Document Type"::Order) then
+        if not (Rec."Unit Price" <> xRec."Unit Price") then
             exit;
-
-        RecLVentilationLines.SetRange("Sales Order No.", Rec."Document No.");
-        RecLVentilationLines.SetRange("Sales Order Line No.", Rec."Line No.");
-        RecLVentilationLines.SetRange("Item No.", Rec."No.");
-        if RecLVentilationLines.FindSet() then
-            repeat
-                RecLVentilationLines.Validate(Amount, Rec.Amount);
-                RecLVentilationLines.Modify();
-            until RecLVentilationLines.Next() = 0;
+        BlueBoticsFctMgt.UpdateAmountVentilation(Rec);
     end;
 
     [EventSubscriber(ObjectType::Table, Database::"Sales Line", 'OnAfterDeleteEvent', '', false, false)]
@@ -147,8 +114,7 @@ codeunit 50200 "BBX Mgt"
             RecLVentilationLines.SetRange("Sales Order No.", Rec."Document No.");
             RecLVentilationLines.SetRange("Sales Order Line No.", Rec."Line No.");
             RecLVentilationLines.SetRange("Item No.", Rec."No.");
-            if RecLVentilationLines.FindSet() then
-                RecLVentilationLines.DeleteAll();
+            RecLVentilationLines.DeleteAll();
         end;
     end;
 
@@ -160,11 +126,16 @@ codeunit 50200 "BBX Mgt"
     begin
         if (not RunTrigger) or (Rec.IsTemporary) then
             exit;
-        if Rec."Document Type" = Rec."Document Type"::Order then begin
+        if (Rec."Document Type" = Rec."Document Type"::Order) and (Rec.Type = Rec.type::Item) then begin
             RecLVentilationSetup.SetRange("Item No.", Rec."No.");
             if RecLVentilationSetup.FindSet() then
                 repeat
-                    RecLVentilationLines.InsertFromSalesLines(Rec, RecLVentilationSetup."Ventilation %");
+                    RecLVentilationLines.Init();
+                    RecLVentilationLines."Entry No." := 0;
+                    RecLVentilationLines.CopyFromSalesLine(Rec);
+                    RecLVentilationLines.Validate("Gen. Prod. Posting Group", RecLVentilationSetup."Gen. Prod. Posting Group");
+                    RecLVentilationLines.Validate("Ventilation %", RecLVentilationSetup."Ventilation %");
+                    RecLVentilationLines.Insert();
                 until RecLVentilationSetup.Next() = 0;
         end;
     end;
@@ -1108,7 +1079,132 @@ codeunit 50200 "BBX Mgt"
         ReservEntry2."Serial No." := ReservEntry."Serial No.";
     end;
 
+    [EventSubscriber(ObjectType::Codeunit, Codeunit::"Sales-Post", 'OnAfterFillInvoicePostBuffer', '', false, false)]
+    local procedure OnAfterFillInvoicePostBuffer(SalesLine: Record "Sales Line"; var InvoicePostBuffer: Record "Invoice Post. Buffer"; var TempInvoicePostBuffer: Record "Invoice Post. Buffer"; CommitIsSuppressed: Boolean)
+    var
+        SalesHeader: Record "Sales Header";
+        GenPostingSetup: Record "General Posting Setup";
+        VentilationLines: Record "BBX Ventilation Lines";
+        FirstInvoicePostBuffer: Record "Invoice Post. Buffer";
+        CurrInvoicePostBuffer: Record "Invoice Post. Buffer";
+        BlueBoticsFctMgt: Codeunit "BBX Function Mgt";
+        SalesAccount: Code[20];
+        TotalVAT: Decimal;
+        TotalVATACY: Decimal;
+        TotalAmount: Decimal;
+        TotalAmountACY: Decimal;
+        VATDifference: Decimal;
+        TotalVATBase: Decimal;
+        TotalVATBaseACY: Decimal;
+        FirstIteration: Boolean;
+        InvDefLineNo: Integer;
+        DeferralLineNo: Integer;
+        TotalVAT2: Decimal;
+        TotalVATACY2: Decimal;
+        TotalAmount2: Decimal;
+        TotalAmountACY2: Decimal;
+        VATDifference2: Decimal;
+        TotalVATBase2: Decimal;
+        TotalVATBaseACY2: Decimal;
+    begin
+        if SalesHeader.Get(SalesLine."Document Type", SalesLine."Document No.") then;
+        if SalesHeader."Document Type" <> SalesHeader."Document Type"::Order then
+            exit;
+        if not BlueBoticsFctMgt.HasVentilationLineLinkToSalesOrderLine(SalesLine) then
+            exit;
 
+        FirstIteration := true;
+        CurrInvoicePostBuffer := InvoicePostBuffer;
 
+        VentilationLines.SetRange("Sales Order No.", SalesLine."Document No.");
+        VentilationLines.SetRange("Sales Order Line No.", SalesLine."Line No.");
+        if VentilationLines.FindSet() then
+            repeat
+                TotalAmount := CalcAmountsWithVentilation(SalesHeader, CurrInvoicePostBuffer.Amount, VentilationLines."Ventilation %");
+                TotalVATBase := CalcAmountsWithVentilation(SalesHeader, CurrInvoicePostBuffer."VAT Base Amount", VentilationLines."Ventilation %");
+                TotalVAT := CalcAmountsWithVentilation(SalesHeader, CurrInvoicePostBuffer."VAT Amount", VentilationLines."Ventilation %");
+                TotalAmountACY := CalcAmountsWithVentilation(SalesHeader, CurrInvoicePostBuffer."Amount (ACY)", VentilationLines."Ventilation %");
+                TotalVATBaseACY := CalcAmountsWithVentilation(SalesHeader, CurrInvoicePostBuffer."VAT Base Amount (ACY)", VentilationLines."Ventilation %");
+                TotalVATACY := CalcAmountsWithVentilation(SalesHeader, CurrInvoicePostBuffer."VAT Amount (ACY)", VentilationLines."Ventilation %");
+                VATDifference := CalcAmountsWithVentilation(SalesHeader, CurrInvoicePostBuffer."VAT Difference", VentilationLines."Ventilation %");
+
+                if (TotalAmount2 + Abs(TotalAmount)) > Abs(CurrInvoicePostBuffer.Amount) then
+                    TotalAmount := CurrInvoicePostBuffer.Amount + TotalAmount2
+                else
+                    TotalAmount2 += Abs(TotalAmount);
+
+                if (TotalVATBase2 + Abs(TotalVATBase)) > Abs(CurrInvoicePostBuffer."VAT Base Amount") then
+                    TotalVATBase := CurrInvoicePostBuffer."VAT Base Amount" + TotalVATBase2
+                else
+                    TotalVATBase2 += Abs(TotalVATBase);
+
+                if (TotalVAT2 + Abs(TotalVAT)) > Abs(CurrInvoicePostBuffer."VAT Amount") then
+                    TotalVAT := CurrInvoicePostBuffer."VAT Amount" + TotalVAT2
+                else
+                    TotalVAT2 += Abs(TotalVAT);
+
+                if (TotalAmountACY2 + Abs(TotalAmountACY)) > Abs(CurrInvoicePostBuffer."Amount (ACY)") then
+                    TotalAmountACY := CurrInvoicePostBuffer."Amount (ACY)" + TotalAmountACY2
+                else
+                    TotalAmountACY2 += Abs(TotalAmountACY);
+
+                if (TotalVATBaseACY2 + Abs(TotalVATBaseACY)) > Abs(CurrInvoicePostBuffer."VAT Base Amount (ACY)") then
+                    TotalVATBaseACY := CurrInvoicePostBuffer."VAT Base Amount (ACY)" + TotalVATBase2
+                else
+                    TotalVATBaseACY2 += Abs(TotalVATBaseACY);
+
+                if (TotalVATACY2 + Abs(TotalVATACY)) > Abs(CurrInvoicePostBuffer."VAT Amount (ACY)") then
+                    TotalVATACY := CurrInvoicePostBuffer."VAT Amount (ACY)" + TotalVATACY2
+                else
+                    TotalVATACY2 += Abs(TotalVATACY);
+
+                if VATDifference2 > Abs(CurrInvoicePostBuffer."VAT Difference") then
+                    VATDifference := CurrInvoicePostBuffer."VAT Difference" + VATDifference2
+                else
+                    VATDifference2 += Abs(VATDifference);
+
+                InvoicePostBuffer.SetAmounts(TotalVAT, TotalVATACY, TotalAmount, TotalAmountACY, VATDifference, TotalVATBase, TotalVATBaseACY);
+                GenPostingSetup.Get(SalesLine."Gen. Bus. Posting Group", VentilationLines."Gen. Prod. Posting Group");
+
+                SalesAccount := GetSalesAccount(SalesLine, GenPostingSetup);
+
+                InvoicePostBuffer.SetAccount(SalesAccount, TotalVAT, TotalVATACY, TotalAmount, TotalAmountACY);
+                InvoicePostBuffer."Gen. Prod. Posting Group" := VentilationLines."Gen. Prod. Posting Group";
+                if FirstIteration then begin
+                    FirstInvoicePostBuffer := InvoicePostBuffer;
+                    FirstIteration := false;
+                end
+                else begin
+                    TempInvoicePostBuffer.Update(InvoicePostBuffer, InvDefLineNo, DeferralLineNo);
+                end;
+            until VentilationLines.Next() = 0;
+        InvoicePostBuffer := FirstInvoicePostBuffer;
+    end;
+
+    local procedure CalcAmountsWithVentilation(SalesHeader: Record "Sales Header"; InitialAmount: Decimal; Ventilation: Decimal) ReturnAmount: Decimal
+    var
+        GenLedgerSetup: Record "General Ledger Setup";
+        Currency: Record Currency;
+    begin
+        //ReturnAmount := (InitialAmount * (Ventilation / 100));
+        if SalesHeader."Currency Code" <> '' then begin
+            Currency.Get(SalesHeader."Currency Code");
+            ReturnAmount := Round((InitialAmount * (Ventilation / 100)), Currency."Amount Rounding Precision");
+        end else begin
+            GenLedgerSetup.Get();
+            ReturnAmount := Round((InitialAmount * (Ventilation / 100)), GenLedgerSetup."Amount Rounding Precision");
+        end;
+    end;
+
+    local procedure GetSalesAccount(SalesLine: Record "Sales Line"; GenPostingSetup: Record "General Posting Setup") SalesAccountNo: Code[20]
+    begin
+        if (SalesLine.Type = SalesLine.Type::"G/L Account") or (SalesLine.Type = SalesLine.Type::"Fixed Asset") then
+            SalesAccountNo := SalesLine."No."
+        else
+            if SalesLine.IsCreditDocType then
+                SalesAccountNo := GenPostingSetup.GetSalesCrMemoAccount
+            else
+                SalesAccountNo := GenPostingSetup.GetSalesAccount;
+    end;
 
 }

@@ -518,14 +518,30 @@ codeunit 50201 "BBX Function Mgt"
         exit(true);
     end;
 
-    procedure CheckVentilationLineOnSalesOrder(CodPDocumentNo: Code[20]): Boolean
+    procedure UpdateAmountVentilation(var SalesLine: Record "Sales Line")
     var
-        RecLVentilationLines: Record "BBX Ventilation Lines";
+        VentilationLines: Record "BBX Ventilation Lines";
     begin
-        RecLVentilationLines.SetRange("Sales Order No.", CodPDocumentNo);
-        if not RecLVentilationLines.IsEmpty then
-            exit(true);
-        exit(false)
+        if (SalesLine."Unit Price" = 0) or (SalesLine."Line No." = 0) or (SalesLine."Document Type" <> SalesLine."Document Type"::Order) then
+            exit;
+
+        VentilationLines.SetRange("Sales Order No.", SalesLine."Document No.");
+        VentilationLines.SetRange("Sales Order Line No.", SalesLine."Line No.");
+        VentilationLines.SetRange("Item No.", SalesLine."No.");
+        if VentilationLines.FindSet() then
+            repeat
+                VentilationLines.Validate(Amount, SalesLine.Amount);
+                VentilationLines.Modify();
+            until VentilationLines.Next() = 0;
+    end;
+
+    procedure HasVentilationLineLinkToSalesOrderLine(SalesLine: Record "Sales Line"): Boolean
+    var
+        VentilationLines: Record "BBX Ventilation Lines";
+    begin
+        VentilationLines.SetRange("Sales Order No.", SalesLine."Document No.");
+        VentilationLines.SetRange("Sales Order Line No.", SalesLine."Line No.");
+        exit(not VentilationLines.IsEmpty);
     end;
 
     procedure FctCreateWhseRequests(SalesHeader: Record "Sales Header")
